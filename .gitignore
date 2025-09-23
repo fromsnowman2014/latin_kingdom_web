@@ -45,3 +45,6 @@ Thumbs.db
 
 # Game assets backup
 latin_kingdom_original/
+
+# Supabase
+supabase/.temp/
