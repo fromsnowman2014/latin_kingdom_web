@@ -29,7 +29,7 @@ export class TowerSprite extends Phaser.GameObjects.Container {
 
     // Create tower sprite
     this.towerSprite = scene.add.image(0, 0, `${towerType}_tower`);
-    this.towerSprite.setScale(0.4); // Scale down to fit grid
+    this.towerSprite.setScale(0.2); // Scale down to fit grid
     this.add(this.towerSprite);
 
     scene.add.existing(this);
