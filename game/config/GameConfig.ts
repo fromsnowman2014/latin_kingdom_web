@@ -47,25 +47,25 @@ export const TOWER_CONFIGS: Record<string, TowerConfig> = {
 export const ENEMY_CONFIGS: Record<string, EnemyConfig> = {
   goblin: {
     maxHealth: 50,
-    speed: 2,
+    speed: 0.5,
     reward: 10,
     size: 15,
   },
   orc: {
     maxHealth: 100,
-    speed: 1.5,
+    speed: 0.2,
     reward: 20,
     size: 20,
   },
   troll: {
     maxHealth: 200,
-    speed: 1.6,
+    speed: 0.2,
     reward: 40,
     size: 25,
   },
   dragon: {
     maxHealth: 500,
-    speed: 3,
+    speed: 0.6,
     reward: 100,
     size: 30,
   },

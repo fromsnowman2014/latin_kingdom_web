@@ -41,7 +41,7 @@ export class EnemySprite extends Phaser.GameObjects.Container {
 
     // Create enemy sprite
     this.enemySprite = scene.add.image(0, 0, enemyType);
-    this.enemySprite.setScale(0.3); // Scale down to appropriate size
+    this.enemySprite.setScale(0.03); // Scale down to 1/10 size
     this.add(this.enemySprite);
 
     // Create health bar background
