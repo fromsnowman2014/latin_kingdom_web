@@ -18,7 +18,10 @@ module.exports = {
         'game': ['Cinzel', 'serif'],
       },
       gridTemplateColumns: {
-        'game-layout': '1fr 320px',
+        'game-layout-sm': '1fr 380px',
+        'game-layout-md': '1fr 420px',
+        'game-layout-lg': '2fr 1fr',
+        'game-layout-xl': '3fr 2fr',
       },
     },
   },

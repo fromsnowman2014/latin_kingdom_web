@@ -11,6 +11,12 @@ export const GAME_CONFIG: GameConstants = {
   ENEMY_SPAWN_DELAY: 1000, // milliseconds
 };
 
+export const QUIZ_CONFIG = {
+  MAX_GOLD_PER_QUESTION: 30,        // 문제당 최대 골드
+  WRONG_ANSWER_PENALTY: 0.2,        // 틀릴 때마다 20% 감소
+  PERFECT_WAVE_MULTIPLIER: 1.2,     // 모든 문제를 맞췄을 때 배수
+};
+
 export const TOWER_COSTS: TowerCosts = {
   archer: 50,
   magic: 100,

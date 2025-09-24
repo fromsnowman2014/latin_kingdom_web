@@ -219,7 +219,7 @@ export default function VocabularyPanel({
       </div>
 
       {/* Vocabulary list */}
-      <div className="space-y-2 max-h-64 overflow-y-auto">
+      <div className="space-y-2 max-h-48 md:max-h-64 overflow-y-auto">
         <h4 className="text-sm font-semibold text-gray-300">All Words</h4>
         {vocabularies.map((vocab, index) => (
           <div

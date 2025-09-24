@@ -177,9 +177,9 @@ export default function GamePage() {
 
   return (
     <div className="h-screen bg-game-primary">
-      <div className="grid grid-cols-1 lg:grid-cols-game-layout h-full">
+      <div className="grid grid-cols-1 md:grid-cols-game-layout-sm lg:grid-cols-game-layout-md xl:grid-cols-game-layout-lg 2xl:grid-cols-game-layout-xl h-full gap-0 md:gap-1">
         {/* Game Canvas */}
-        <div className="relative">
+        <div className="relative h-1/2 md:h-full">
           <GameCanvas
             onGameStateChange={handleGameStateChange}
             onGoldChange={(gold) => console.log('Gold changed:', gold)}
@@ -187,89 +187,92 @@ export default function GamePage() {
         </div>
 
         {/* Latin Learning Panel */}
-        <div className="bg-gray-900 text-white p-4 overflow-y-auto">
-          <div className="mb-4">
-            <h2 className="text-xl font-game font-bold text-game-accent mb-2">
+        <div className="bg-gray-900 text-white flex flex-col border-l md:border-l border-t md:border-t-0 border-gray-700">
+          {/* Header - Fixed */}
+          <div className="p-3 md:p-4 border-b border-gray-700 bg-gray-800">
+            <h2 className="text-lg md:text-xl font-game font-bold text-game-accent mb-1">
               {currentAssignment.title}
             </h2>
-            <p className="text-sm text-gray-300">{currentAssignment.description}</p>
+            <p className="text-xs md:text-sm text-gray-300">{currentAssignment.description}</p>
           </div>
 
-          {/* Vocabulary Learning Component */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-3 text-game-accent">Learn Vocabulary</h3>
-            <VocabularyPanel
-              vocabularies={currentAssignment.vocabularies || []}
-              assignmentId={currentAssignment.id}
-              onGoldEarned={handleGoldEarned}
-              onWordLearned={handleWordLearned}
-              onValidationResult={handleValidationResult}
-            />
-          </div>
-
-          {/* Game Stats */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-3 text-game-accent">Game Stats</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-gray-800 p-3 rounded-lg text-center">
-                <div className="text-game-accent font-bold text-lg">{stats.gold}</div>
-                <div className="text-gray-400 text-sm">Gold</div>
+          {/* Game Stats - Compact */}
+          <div className="p-3 border-b border-gray-700 bg-gray-850">
+            <div className="grid grid-cols-4 gap-2">
+              <div className="bg-gray-800 p-2 rounded text-center">
+                <div className="text-game-accent font-bold text-sm md:text-base">{stats.gold}</div>
+                <div className="text-gray-400 text-xs">Gold</div>
               </div>
-              <div className="bg-gray-800 p-3 rounded-lg text-center">
-                <div className="text-game-danger font-bold text-lg">{gameState?.lives || stats.lives}</div>
-                <div className="text-gray-400 text-sm">Lives</div>
+              <div className="bg-gray-800 p-2 rounded text-center">
+                <div className="text-game-danger font-bold text-sm md:text-base">{gameState?.lives || stats.lives}</div>
+                <div className="text-gray-400 text-xs">Lives</div>
               </div>
-              <div className="bg-gray-800 p-3 rounded-lg text-center">
-                <div className="text-game-success font-bold text-lg">{gameState?.wave || stats.wave}</div>
-                <div className="text-gray-400 text-sm">Wave</div>
+              <div className="bg-gray-800 p-2 rounded text-center">
+                <div className="text-game-success font-bold text-sm md:text-base">{gameState?.wave || stats.wave}</div>
+                <div className="text-gray-400 text-xs">Wave</div>
               </div>
-              <div className="bg-gray-800 p-3 rounded-lg text-center">
-                <div className="text-white font-bold text-lg">{gameState?.score || stats.score}</div>
-                <div className="text-gray-400 text-sm">Score</div>
+              <div className="bg-gray-800 p-2 rounded text-center">
+                <div className="text-white font-bold text-sm md:text-base">{gameState?.score || stats.score}</div>
+                <div className="text-gray-400 text-xs">Score</div>
               </div>
             </div>
           </div>
 
-          {/* Learning Progress */}
-          <div>
-            <h3 className="text-lg font-semibold mb-3 text-game-accent">Learning Progress</h3>
-            <div className="space-y-3">
-              <div className="bg-gray-800 p-3 rounded-lg">
-                <div className="flex justify-between text-sm text-gray-300 mb-2">
-                  <span>Words Learned</span>
-                  <span>{stats.wordsLearned}/{currentAssignment.vocabularies?.length || 0}</span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div
-                    className="bg-game-accent h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${((stats.wordsLearned) / (currentAssignment.vocabularies?.length || 1)) * 100}%`
-                    }}
-                  />
-                </div>
-              </div>
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-4">
+            {/* Vocabulary Learning Component */}
+            <div>
+              <h3 className="text-base md:text-lg font-semibold mb-3 text-game-accent">Learn Vocabulary</h3>
+              <VocabularyPanel
+                vocabularies={currentAssignment.vocabularies || []}
+                assignmentId={currentAssignment.id}
+                onGoldEarned={handleGoldEarned}
+                onWordLearned={handleWordLearned}
+                onValidationResult={handleValidationResult}
+              />
+            </div>
 
-              <div className="bg-gray-800 p-3 rounded-lg">
-                <div className="flex justify-between text-sm text-gray-300 mb-2">
-                  <span>Accuracy</span>
-                  <span>{stats.accuracy}%</span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div
-                    className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${stats.accuracy}%` }}
-                  />
-                </div>
-              </div>
-
-              {gameState?.gameOver && (
-                <div className="bg-red-800 bg-opacity-50 border border-red-600 text-red-200 p-3 rounded-lg text-center">
-                  <div className="font-bold">Game Over!</div>
-                  <div className="text-sm mt-1">
-                    Final Score: {gameState.score} | Words Learned: {stats.wordsLearned}
+            {/* Learning Progress */}
+            <div>
+              <h3 className="text-base md:text-lg font-semibold mb-3 text-game-accent">Learning Progress</h3>
+              <div className="space-y-3">
+                <div className="bg-gray-800 p-3 rounded-lg">
+                  <div className="flex justify-between text-sm text-gray-300 mb-2">
+                    <span>Words Learned</span>
+                    <span>{stats.wordsLearned}/{currentAssignment.vocabularies?.length || 0}</span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div
+                      className="bg-game-accent h-2 rounded-full transition-all duration-300"
+                      style={{
+                        width: `${((stats.wordsLearned) / (currentAssignment.vocabularies?.length || 1)) * 100}%`
+                      }}
+                    />
                   </div>
                 </div>
-              )}
+
+                <div className="bg-gray-800 p-3 rounded-lg">
+                  <div className="flex justify-between text-sm text-gray-300 mb-2">
+                    <span>Accuracy</span>
+                    <span>{stats.accuracy}%</span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div
+                      className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${stats.accuracy}%` }}
+                    />
+                  </div>
+                </div>
+
+                {gameState?.gameOver && (
+                  <div className="bg-red-800 bg-opacity-50 border border-red-600 text-red-200 p-3 rounded-lg text-center">
+                    <div className="font-bold">Game Over!</div>
+                    <div className="text-sm mt-1">
+                      Final Score: {gameState.score} | Words Learned: {stats.wordsLearned}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

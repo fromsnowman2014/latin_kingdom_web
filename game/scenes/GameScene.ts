@@ -1,8 +1,9 @@
 import * as Phaser from 'phaser';
-import { GAME_CONFIG, TOWER_COSTS, COLORS } from '../config/GameConfig';
+import { GAME_CONFIG, TOWER_COSTS, COLORS, QUIZ_CONFIG } from '../config/GameConfig';
 import { TowerSprite } from '../entities/TowerSprite';
 import { EnemySprite } from '../entities/EnemySprite';
 import { GamePosition, TowerType } from '@/types/game';
+import { QuizCalculator, QuizResult, QuestionAttempt } from '../utils/QuizCalculator';
 
 interface LocalGameState {
   gold: number;
@@ -15,6 +16,9 @@ interface LocalGameState {
   selectedTowerType: TowerType;
   selectedTower: TowerSprite | null;
   path: GamePosition[];
+  showNextWaveButton: boolean;
+  quizCompleted: boolean;
+  currentQuizResult: QuizResult | null;
 }
 
 export class GameScene extends Phaser.Scene {
@@ -27,6 +31,7 @@ export class GameScene extends Phaser.Scene {
   private dragging: boolean = false;
   private dragTowerType: TowerType | null = null;
   private previewTower: Phaser.GameObjects.Graphics | null = null;
+  private nextWaveButton: Phaser.GameObjects.Container | null = null;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -43,6 +48,9 @@ export class GameScene extends Phaser.Scene {
       selectedTowerType: 'archer',
       selectedTower: null,
       path: [],
+      showNextWaveButton: false,
+      quizCompleted: false,
+      currentQuizResult: null,
     };
 
     this.towers = [];
@@ -109,6 +117,18 @@ export class GameScene extends Phaser.Scene {
       this.gameState.waveInProgress = false;
       this.gameState.waveComplete = true;
       this.gameState.gold += GAME_CONFIG.WAVE_COMPLETION_BONUS;
+      this.gameState.showNextWaveButton = true;
+      this.showNextWaveButton();
+      
+      // Initialize quiz for this wave
+      this.initializeQuizForWave();
+      
+      // Emit event for vocabulary quiz
+      this.events.emit('waveCompleted', {
+        wave: this.gameState.wave,
+        bonus: GAME_CONFIG.WAVE_COMPLETION_BONUS,
+        maxGoldPerQuestion: QUIZ_CONFIG.MAX_GOLD_PER_QUESTION
+      });
     }
 
     // Update UI
@@ -128,6 +148,8 @@ export class GameScene extends Phaser.Scene {
       gameOver: this.gameState.gameOver,
       waveInProgress: this.gameState.waveInProgress,
       waveComplete: this.gameState.waveComplete,
+      showNextWaveButton: this.gameState.showNextWaveButton,
+      quizCompleted: this.gameState.quizCompleted,
     };
   }
 
@@ -140,6 +162,88 @@ export class GameScene extends Phaser.Scene {
   addGoldFromVocabulary(amount: number) {
     this.gameState.gold += amount;
     this.events.emit('goldFromVocabulary', amount);
+  }
+
+  // Public method to mark quiz as completed with detailed results
+  markQuizCompleted(quizResult?: QuizResult) {
+    this.gameState.quizCompleted = true;
+    
+    if (quizResult) {
+      this.gameState.currentQuizResult = quizResult;
+      const totalGold = QuizCalculator.calculateWaveGold(quizResult);
+      this.gameState.gold += totalGold;
+      
+      this.events.emit('quizCompleted', { 
+        totalGold,
+        quizResult,
+        summary: QuizCalculator.getQuizSummary(quizResult)
+      });
+    } else {
+      // Fallback for backward compatibility
+      const defaultGold = 100;
+      this.gameState.gold += defaultGold;
+      this.events.emit('quizCompleted', { totalGold: defaultGold });
+    }
+  }
+
+  // Public method to start next wave
+  startNextWave() {
+    if (this.gameState.waveComplete && !this.gameState.waveInProgress) {
+      this.hideNextWaveButton();
+      this.gameState.wave++;
+      this.gameState.waveComplete = false;
+      this.gameState.showNextWaveButton = false;
+      this.gameState.quizCompleted = false;
+      this.gameState.currentQuizResult = null;
+      this.startWave();
+    }
+  }
+
+  // Public method to handle individual question attempts
+  submitQuestionAnswer(questionId: number, attemptsCount: number, isCorrect: boolean): number {
+    const attempt = QuizCalculator.createQuestionAttempt(questionId, attemptsCount, isCorrect);
+    
+    if (isCorrect) {
+      this.gameState.gold += attempt.goldEarned;
+      this.events.emit('questionAnswered', {
+        questionId,
+        isCorrect: true,
+        attemptsCount,
+        goldEarned: attempt.goldEarned,
+        message: `Correct! +${attempt.goldEarned} gold`
+      });
+    } else {
+      const nextAttemptGold = QuizCalculator.previewQuestionGold(attemptsCount);
+      this.events.emit('questionAnswered', {
+        questionId,
+        isCorrect: false,
+        attemptsCount,
+        goldEarned: 0,
+        nextAttemptGold,
+        message: `Wrong answer. Next attempt will earn ${nextAttemptGold} gold.`
+      });
+    }
+    
+    return attempt.goldEarned;
+  }
+
+  // Public method to get quiz configuration
+  getQuizConfig() {
+    return {
+      maxGoldPerQuestion: QUIZ_CONFIG.MAX_GOLD_PER_QUESTION,
+      wrongAnswerPenalty: QUIZ_CONFIG.WRONG_ANSWER_PENALTY,
+      perfectWaveMultiplier: QUIZ_CONFIG.PERFECT_WAVE_MULTIPLIER
+    };
+  }
+
+  // Private method to initialize quiz for current wave
+  private initializeQuizForWave() {
+    this.gameState.currentQuizResult = {
+      totalQuestions: 0,
+      correctAnswers: 0,
+      wrongAnswers: 0,
+      attempts: []
+    };
   }
 
   private createGridBackground() {
@@ -539,5 +643,78 @@ export class GameScene extends Phaser.Scene {
     this.input.once('pointerdown', () => {
       this.scene.restart();
     });
+  }
+
+  private showNextWaveButton() {
+    if (this.nextWaveButton) {
+      this.hideNextWaveButton();
+    }
+
+    // Create button container
+    this.nextWaveButton = this.add.container(GAME_CONFIG.SCREEN_WIDTH / 2, GAME_CONFIG.SCREEN_HEIGHT / 2);
+
+    // Button background
+    const buttonBg = this.add.graphics();
+    buttonBg.fillStyle(0x4CAF50);
+    buttonBg.fillRoundedRect(-100, -30, 200, 60, 10);
+    buttonBg.lineStyle(3, 0x388E3C);
+    buttonBg.strokeRoundedRect(-100, -30, 200, 60, 10);
+    this.nextWaveButton.add(buttonBg);
+
+    // Button text
+    const buttonText = this.add.text(0, 0, `Next Wave ${this.gameState.wave + 1}`, {
+      fontSize: '20px',
+      color: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.nextWaveButton.add(buttonText);
+
+    // Subtitle text
+    const subtitleText = this.add.text(0, 40, 'Complete vocabulary quiz to earn bonus gold!', {
+      fontSize: '14px',
+      color: '#ffffff'
+    }).setOrigin(0.5);
+    this.nextWaveButton.add(subtitleText);
+
+    // Make button interactive
+    const buttonZone = this.add.zone(0, 0, 200, 100)
+      .setInteractive()
+      .on('pointerdown', () => {
+        this.startNextWave();
+      })
+      .on('pointerover', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0x66BB6A);
+        buttonBg.fillRoundedRect(-100, -30, 200, 60, 10);
+        buttonBg.lineStyle(3, 0x388E3C);
+        buttonBg.strokeRoundedRect(-100, -30, 200, 60, 10);
+      })
+      .on('pointerout', () => {
+        buttonBg.clear();
+        buttonBg.fillStyle(0x4CAF50);
+        buttonBg.fillRoundedRect(-100, -30, 200, 60, 10);
+        buttonBg.lineStyle(3, 0x388E3C);
+        buttonBg.strokeRoundedRect(-100, -30, 200, 60, 10);
+      });
+    
+    this.nextWaveButton.add(buttonZone);
+
+    // Add glow effect
+    this.tweens.add({
+      targets: this.nextWaveButton,
+      scaleX: 1.05,
+      scaleY: 1.05,
+      duration: 1000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Power2'
+    });
+  }
+
+  private hideNextWaveButton() {
+    if (this.nextWaveButton) {
+      this.nextWaveButton.destroy();
+      this.nextWaveButton = null;
+    }
   }
 }
