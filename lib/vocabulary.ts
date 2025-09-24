@@ -48,66 +48,128 @@ export async function getAssignment(assignmentId: string): Promise<Assignment | 
   }
 }
 
-// Validate Latin word input
+// Local mock vocabulary for fallback when Supabase is not available
+const mockVocabularies = [
+  {
+    id: '1',
+    assignment_id: '1',
+    english_meaning: 'water',
+    latin_word: 'aqua',
+    difficulty: 1,
+    word_length: 4,
+    hints: ['a', 'aq', 'aqu'],
+  },
+  {
+    id: '2',
+    assignment_id: '1',
+    english_meaning: 'fire',
+    latin_word: 'ignis',
+    difficulty: 2,
+    word_length: 5,
+    hints: ['i', 'ig', 'ign', 'igni'],
+  },
+  {
+    id: '3',
+    assignment_id: '1',
+    english_meaning: 'earth',
+    latin_word: 'terra',
+    difficulty: 1,
+    word_length: 5,
+    hints: ['t', 'te', 'ter', 'terr'],
+  },
+  {
+    id: '4',
+    assignment_id: '1',
+    english_meaning: 'air',
+    latin_word: 'aer',
+    difficulty: 1,
+    word_length: 3,
+    hints: ['a', 'ae'],
+  },
+  {
+    id: '5',
+    assignment_id: '1',
+    english_meaning: 'light',
+    latin_word: 'lux',
+    difficulty: 1,
+    word_length: 3,
+    hints: ['l', 'lu'],
+  },
+];
+
+// Validate Latin word input with Supabase fallback to mock data
 export async function validateLatinWord(
   englishMeaning: string,
   userInput: string,
   assignmentId: string
 ): Promise<WordValidationResult> {
+  let vocabulary: any = null;
+
   try {
-    // First, get the vocabulary record
-    const { data: vocabulary, error: vocabError } = await supabase
+    // First, try to get the vocabulary record from Supabase
+    const { data, error: vocabError } = await supabase
       .from('vocabularies')
       .select('*')
       .eq('assignment_id', assignmentId)
       .ilike('english_meaning', englishMeaning)
       .single();
 
-    if (vocabError || !vocabulary) {
-      console.error('Error finding vocabulary:', vocabError);
-      return {
-        is_correct: false,
-        correct_word: '',
-        hint_level: 0,
-        gold_reward: 0,
-      };
+    if (!vocabError && data) {
+      vocabulary = data;
     }
+  } catch (supabaseError) {
+    console.warn('Supabase connection failed, using mock data:', supabaseError);
+  }
 
-    const trimmedInput = userInput.trim().toLowerCase();
-    const correctWord = vocabulary.latin_word.toLowerCase();
+  // Fallback to mock data if Supabase failed
+  if (!vocabulary) {
+    vocabulary = mockVocabularies.find(
+      (v) =>
+        v.assignment_id === assignmentId &&
+        v.english_meaning.toLowerCase() === englishMeaning.toLowerCase()
+    );
+  }
 
-    // Check if answer is correct
-    if (trimmedInput === correctWord) {
-      return {
-        is_correct: true,
-        correct_word: vocabulary.latin_word,
-        hint_level: 0,
-        gold_reward: vocabulary.difficulty * 10,
-      };
-    }
-
-    // Calculate hint level based on input length
-    const inputLength = trimmedInput.length;
-    const hints = vocabulary.hints || [];
-    const maxHints = hints.length;
-    const hintLevel = Math.min(inputLength + 1, maxHints);
-
-    return {
-      is_correct: false,
-      correct_word: vocabulary.latin_word,
-      hint_level: hintLevel,
-      gold_reward: Math.max(1, (vocabulary.difficulty * 10) - (inputLength * 2)),
-      current_hint: hints[hintLevel - 1] || hints[hints.length - 1],
-    };
-  } catch (error) {
-    console.error('Failed to validate word:', error);
+  // If still no vocabulary found, return failure
+  if (!vocabulary) {
+    console.error('No vocabulary found for:', englishMeaning);
     return {
       is_correct: false,
       correct_word: '',
       hint_level: 0,
       gold_reward: 0,
+      current_hint: 'Word not found in vocabulary',
     };
   }
+
+  const trimmedInput = userInput.trim().toLowerCase();
+  const correctWord = vocabulary.latin_word.toLowerCase();
+
+  // Check if answer is correct
+  if (trimmedInput === correctWord) {
+    return {
+      is_correct: true,
+      correct_word: vocabulary.latin_word,
+      hint_level: 0,
+      gold_reward: vocabulary.difficulty * 10,
+    };
+  }
+
+  // Calculate hint level based on attempts
+  const hints = vocabulary.hints || [];
+  const inputLength = trimmedInput.length;
+  const maxHints = hints.length;
+
+  // Progressive hint system: show more hints as user tries more
+  const hintLevel = Math.min(Math.max(0, inputLength), maxHints - 1);
+
+  return {
+    is_correct: false,
+    correct_word: vocabulary.latin_word,
+    hint_level: hintLevel,
+    gold_reward: Math.max(1, (vocabulary.difficulty * 10) - (hintLevel * 2)),
+    current_hint: hints[hintLevel] || hints[hints.length - 1] || vocabulary.latin_word.substring(0, Math.min(3, vocabulary.latin_word.length)),
+  };
 }
 
 // Create or update learning progress

@@ -111,23 +111,26 @@ export default function VocabularyPanel({
     }
   };
 
+  const handleHint = () => {
+    if (!currentWord?.hints?.length) return;
+
+    const hintIndex = Math.min(attempts, currentWord.hints.length - 1);
+    const hint = currentWord.hints[hintIndex];
+
+    setFeedback({
+      type: 'hint',
+      message: `Hint: ${hint}`
+    });
+
+    setAttempts(prev => prev + 1);
+  };
+
   const handleSkip = () => {
     if (currentWordIndex < vocabularies.length - 1) {
       setCurrentWordIndex(prev => prev + 1);
     } else {
       setCurrentWordIndex(0);
     }
-  };
-
-  const getHintText = () => {
-    if (currentHint) {
-      return `Hint: ${currentHint}`;
-    }
-    if (attempts > 0 && currentWord?.hints?.length) {
-      const hintIndex = Math.min(attempts - 1, currentWord.hints.length - 1);
-      return `Hint: ${currentWord.hints[hintIndex]}`;
-    }
-    return '';
   };
 
   if (!vocabularies.length) {
@@ -140,35 +143,52 @@ export default function VocabularyPanel({
 
   return (
     <div className="space-y-4">
-      {/* Progress indicator */}
-      <div className="flex justify-between items-center text-sm text-gray-300">
-        <span>Word {currentWordIndex + 1} of {vocabularies.length}</span>
-        <span>{learnedWords.size} learned</span>
+      {/* Word List Panel - PRD Design */}
+      <div className="bg-gray-800 rounded-lg p-4">
+        <h4 className="text-sm font-semibold text-gray-300 mb-3">Word List</h4>
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          {vocabularies.map((vocab, index) => (
+            <div
+              key={vocab.id}
+              className={`p-2 rounded text-sm cursor-pointer transition-colors flex justify-between items-center ${
+                index === currentWordIndex
+                  ? 'bg-game-accent bg-opacity-20 border border-game-accent text-white'
+                  : learnedWords.has(vocab.id)
+                  ? 'bg-green-800 bg-opacity-30 border border-green-600 text-green-200'
+                  : 'bg-gray-700 border border-gray-600 text-gray-300 hover:bg-gray-600'
+              }`}
+              onClick={() => setCurrentWordIndex(index)}
+            >
+              <span>
+                {index + 1}. {vocab.english_meaning} → {learnedWords.has(vocab.id) ? vocab.latin_word : '?'}
+              </span>
+              <div className="flex items-center gap-2">
+                {learnedWords.has(vocab.id) && (
+                  <span className="text-green-400 text-xs">✓</span>
+                )}
+                <span className="text-xs opacity-70">{vocab.difficulty}/5</span>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Progress bar */}
-      <div className="w-full bg-gray-700 rounded-full h-2">
-        <div
-          className="bg-game-accent h-2 rounded-full transition-all duration-300"
-          style={{ width: `${(learnedWords.size / vocabularies.length) * 100}%` }}
-        />
-      </div>
-
-      {/* Current word */}
-      <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-        <div className="mb-3">
-          <label className="block text-sm text-gray-300 mb-2">
-            English meaning:
-          </label>
-          <div className="text-xl font-bold text-white mb-2">
-            {currentWord?.english_meaning}
+      {/* Current Word Input Area - PRD Design */}
+      <div className="bg-gray-800 rounded-lg p-4">
+        <div className="mb-4">
+          <div className="text-sm text-gray-400 mb-1">
+            Word {currentWordIndex + 1} of {vocabularies.length}
+          </div>
+          <div className="text-lg font-bold text-white mb-2">
+            English: "{currentWord?.english_meaning}"
           </div>
           <div className="text-sm text-gray-400">
-            Difficulty: {currentWord?.difficulty}/5 | {currentWord?.word_length} letters
+            Difficulty: {currentWord?.difficulty}/5 • {currentWord?.word_length} letters
           </div>
         </div>
 
-        <div className="mb-3">
+        {/* Input Field */}
+        <div className="mb-4">
           <input
             type="text"
             value={userInput}
@@ -180,13 +200,21 @@ export default function VocabularyPanel({
           />
         </div>
 
-        <div className="flex gap-2 mb-3">
+        {/* Action Buttons */}
+        <div className="flex gap-2 mb-4">
           <button
             onClick={handleSubmit}
             disabled={!userInput.trim() || isLoading}
             className="flex-1 bg-game-accent hover:bg-yellow-400 disabled:bg-gray-600 disabled:cursor-not-allowed text-gray-900 py-2 px-4 rounded font-semibold transition-colors"
           >
             {isLoading ? 'Checking...' : 'Submit'}
+          </button>
+          <button
+            onClick={handleHint}
+            disabled={isLoading || !currentWord?.hints?.length}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded transition-colors"
+          >
+            Hint
           </button>
           <button
             onClick={handleSkip}
@@ -197,53 +225,32 @@ export default function VocabularyPanel({
           </button>
         </div>
 
-        {/* Hint */}
-        {getHintText() && (
-          <div className="text-sm text-game-accent mb-2">
-            {getHintText()}
-          </div>
-        )}
-
-        {/* Feedback */}
+        {/* Feedback Message */}
         {feedback && (
-          <div className={`text-sm p-2 rounded ${
+          <div className={`text-sm p-3 rounded ${
             feedback.type === 'success'
-              ? 'bg-green-800 text-green-200'
+              ? 'bg-green-800 text-green-200 border border-green-600'
               : feedback.type === 'error'
-              ? 'bg-red-800 text-red-200'
-              : 'bg-blue-800 text-blue-200'
+              ? 'bg-red-800 text-red-200 border border-red-600'
+              : 'bg-blue-800 text-blue-200 border border-blue-600'
           }`}>
             {feedback.message}
           </div>
         )}
       </div>
 
-      {/* Vocabulary list */}
-      <div className="space-y-2 max-h-48 md:max-h-64 overflow-y-auto">
-        <h4 className="text-sm font-semibold text-gray-300">All Words</h4>
-        {vocabularies.map((vocab, index) => (
+      {/* Progress Summary */}
+      <div className="bg-gray-800 rounded-lg p-3">
+        <div className="flex justify-between items-center text-sm text-gray-300 mb-2">
+          <span>Learning Progress</span>
+          <span>{learnedWords.size}/{vocabularies.length} learned</span>
+        </div>
+        <div className="w-full bg-gray-700 rounded-full h-2">
           <div
-            key={vocab.id}
-            className={`p-2 rounded border text-sm cursor-pointer transition-colors ${
-              index === currentWordIndex
-                ? 'bg-game-accent bg-opacity-20 border-game-accent text-white'
-                : learnedWords.has(vocab.id)
-                ? 'bg-green-800 bg-opacity-30 border-green-600 text-green-200'
-                : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'
-            }`}
-            onClick={() => setCurrentWordIndex(index)}
-          >
-            <div className="flex justify-between items-center">
-              <span>{vocab.english_meaning}</span>
-              <div className="flex items-center gap-2">
-                {learnedWords.has(vocab.id) && (
-                  <span className="text-green-400 text-xs">✓</span>
-                )}
-                <span className="text-xs">{vocab.difficulty}/5</span>
-              </div>
-            </div>
-          </div>
-        ))}
+            className="bg-game-accent h-2 rounded-full transition-all duration-300"
+            style={{ width: `${(learnedWords.size / vocabularies.length) * 100}%` }}
+          />
+        </div>
       </div>
     </div>
   );
