@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Assignment, WordValidationResult } from '@/types/game';
 import { useGameStore, useGameStats } from '@/store/gameStore';
@@ -135,19 +135,19 @@ export default function GamePage() {
     loadAssignments();
   }, [setCurrentAssignment, setVocabularies]);
 
-  const handleGameStateChange = (state: any) => {
+  const handleGameStateChange = useCallback((state: any) => {
     setGameState(state);
-  };
+  }, []);
 
-  const handleGoldEarned = (amount: number) => {
+  const handleGoldEarned = useCallback((amount: number) => {
     addGold(amount);
-  };
+  }, [addGold]);
 
-  const handleWordLearned = (vocabularyId: string) => {
+  const handleWordLearned = useCallback((vocabularyId: string) => {
     markWordLearned(vocabularyId);
-  };
+  }, [markWordLearned]);
 
-  const handleValidationResult = (result: WordValidationResult) => {
+  const handleValidationResult = useCallback((result: WordValidationResult) => {
     recordAttempt(result.is_correct);
 
     if (result.is_correct) {
@@ -157,7 +157,19 @@ export default function GamePage() {
       // Add visual feedback for incorrect answer
       console.log(`Incorrect. ${result.current_hint ? `Hint: ${result.current_hint}` : 'Try again!'}`);
     }
-  };
+  }, [recordAttempt]);
+
+  const handleWaveCompleted = useCallback((waveData: any) => {
+    console.log('Wave completed:', waveData);
+  }, []);
+
+  const handleQuizCompleted = useCallback((quizData: any) => {
+    console.log('Quiz completed:', quizData);
+  }, []);
+
+  const handleQuestionAnswered = useCallback((questionData: any) => {
+    console.log('Question answered:', questionData);
+  }, []);
 
   const handleTowerSelect = (towerType: 'archer' | 'magic' | 'cannon') => {
     const tower = towers[towerType];
@@ -282,9 +294,9 @@ export default function GamePage() {
           <GameCanvas
             onGameStateChange={handleGameStateChange}
             onGoldChange={handleGoldEarned}
-            onWaveCompleted={(waveData) => console.log('Wave completed:', waveData)}
-            onQuizCompleted={(quizData) => console.log('Quiz completed:', quizData)}
-            onQuestionAnswered={(questionData) => console.log('Question answered:', questionData)}
+            onWaveCompleted={handleWaveCompleted}
+            onQuizCompleted={handleQuizCompleted}
+            onQuestionAnswered={handleQuestionAnswered}
           />
         </div>
 

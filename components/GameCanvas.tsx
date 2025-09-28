@@ -25,6 +25,26 @@ interface GameCanvasProps {
 export default function GameCanvas({ onGameStateChange, onGoldChange, onWaveCompleted, onQuizCompleted, onQuestionAnswered }: GameCanvasProps) {
   const gameRef = useRef<Phaser.Game | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Use refs to store callbacks to avoid dependency issues
+  const callbacksRef = useRef({
+    onGameStateChange,
+    onGoldChange,
+    onWaveCompleted,
+    onQuizCompleted,
+    onQuestionAnswered
+  });
+
+  // Update callback refs when props change
+  useEffect(() => {
+    callbacksRef.current = {
+      onGameStateChange,
+      onGoldChange,
+      onWaveCompleted,
+      onQuizCompleted,
+      onQuestionAnswered
+    };
+  });
 
   // Game store
   const { gold, addGold, setGameActive } = useGameStore();
@@ -55,23 +75,26 @@ export default function GameCanvas({ onGameStateChange, onGoldChange, onWaveComp
 
       // Listen for game state changes
       gameScene.events.on('gameStateChanged', (state: any) => {
-        onGameStateChange?.(state);
+        callbacksRef.current.onGameStateChange?.(state);
       });
 
       // Listen for gold changes from vocabulary learning
       gameScene.events.on('goldFromVocabulary', (amount: number) => {
         addGold(amount);
-        onGoldChange?.(gold + amount);
+        // Use callback to get updated gold value
+        setTimeout(() => {
+          callbacksRef.current.onGoldChange?.(amount);
+        }, 0);
       });
 
       // Listen for wave completion
       gameScene.events.on('waveCompleted', (waveData: { wave: number; bonus: number; maxGoldPerQuestion: number }) => {
-        onWaveCompleted?.(waveData);
+        callbacksRef.current.onWaveCompleted?.(waveData);
       });
 
       // Listen for quiz completion
       gameScene.events.on('quizCompleted', (quizData: { totalGold: number; quizResult?: any; summary?: string }) => {
-        onQuizCompleted?.(quizData);
+        callbacksRef.current.onQuizCompleted?.(quizData);
       });
 
       // Listen for individual question answers
@@ -83,7 +106,7 @@ export default function GameCanvas({ onGameStateChange, onGoldChange, onWaveComp
         nextAttemptGold?: number;
         message: string; 
       }) => {
-        onQuestionAnswered?.(questionData);
+        callbacksRef.current.onQuestionAnswered?.(questionData);
       });
     }
 
@@ -95,7 +118,7 @@ export default function GameCanvas({ onGameStateChange, onGoldChange, onWaveComp
       }
       setGameActive(false);
     };
-  }, [addGold, gold, onGameStateChange, onGoldChange, onQuestionAnswered, onQuizCompleted, onWaveCompleted, setGameActive]);
+  }, [setGameActive]); // Only include stable dependencies
 
   // Sync gold changes to Phaser game
   useEffect(() => {
@@ -121,20 +144,20 @@ export default function GameCanvas({ onGameStateChange, onGoldChange, onWaveComp
 
   // Expose game instance for external access
   useEffect(() => {
-    if (gameRef.current && onGameStateChange) {
+    if (gameRef.current) {
       // Periodically sync game state
       const interval = setInterval(() => {
         if (gameRef.current?.scene.scenes[1]) {
           const gameScene = gameRef.current.scene.scenes[1] as any;
-          if (gameScene.getGameState) {
-            onGameStateChange(gameScene.getGameState());
+          if (gameScene.getGameState && callbacksRef.current.onGameStateChange) {
+            callbacksRef.current.onGameStateChange(gameScene.getGameState());
           }
         }
       }, 1000);
 
       return () => clearInterval(interval);
     }
-  }, [onGameStateChange]);
+  }, []); // No dependencies needed since we use refs
 
   // Expose method to mark quiz as completed with detailed results
   const markQuizCompleted = (quizResult?: any) => {
