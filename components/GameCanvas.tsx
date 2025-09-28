@@ -95,7 +95,7 @@ export default function GameCanvas({ onGameStateChange, onGoldChange, onWaveComp
       }
       setGameActive(false);
     };
-  }, []);
+  }, [addGold, gold, onGameStateChange, onGoldChange, onQuestionAnswered, onQuizCompleted, onWaveCompleted, setGameActive]);
 
   // Sync gold changes to Phaser game
   useEffect(() => {

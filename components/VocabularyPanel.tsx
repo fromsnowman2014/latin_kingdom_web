@@ -180,7 +180,7 @@ export default function VocabularyPanel({
             Word {currentWordIndex + 1} of {vocabularies.length}
           </div>
           <div className="text-lg font-bold text-white mb-2">
-            English: "{currentWord?.english_meaning}"
+            English: &ldquo;{currentWord?.english_meaning}&rdquo;
           </div>
           <div className="text-sm text-gray-400">
             Difficulty: {currentWord?.difficulty}/5 • {currentWord?.word_length} letters
