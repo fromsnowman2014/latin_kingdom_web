@@ -286,7 +286,7 @@ export class GameScene extends Phaser.Scene {
     const startY = startYGrid * this.gridSize + this.gridSize / 2;
     pathPoints.push({ x: startX, y: startY });
 
-    // Generate intermediate points
+    // Generate intermediate points with orthogonal movement only
     let currentX = startX;
     let currentY = startY;
 
@@ -294,37 +294,67 @@ export class GameScene extends Phaser.Scene {
     const segmentWidth = (GAME_CONFIG.SCREEN_WIDTH - 120) / numSegments;
 
     for (let i = 1; i < numSegments; i++) {
-      currentX += segmentWidth;
-      currentX = Math.floor(currentX / this.gridSize) * this.gridSize + this.gridSize / 2;
+      const nextX = currentX + segmentWidth;
+      const nextXSnapped = Math.floor(nextX / this.gridSize) * this.gridSize + this.gridSize / 2;
 
+      let nextY: number;
       if (i < numSegments / 2) {
         const verticalChange = Phaser.Math.Between(-2, 2) * this.gridSize;
-        currentY += verticalChange;
+        nextY = currentY + verticalChange;
       } else {
         const targetYGrid = Math.floor((GAME_CONFIG.SCREEN_HEIGHT / 2) / this.gridSize);
         const currentYGrid = Math.floor(currentY / this.gridSize);
         if (currentYGrid > targetYGrid) {
           const verticalChange = Phaser.Math.Between(-2, 0) * this.gridSize;
-          currentY += verticalChange;
+          nextY = currentY + verticalChange;
         } else {
           const verticalChange = Phaser.Math.Between(0, 2) * this.gridSize;
-          currentY += verticalChange;
+          nextY = currentY + verticalChange;
         }
       }
 
       // Keep within bounds
-      const currentYGrid = Math.floor(currentY / this.gridSize);
-      const boundedYGrid = Phaser.Math.Clamp(currentYGrid, 3, Math.floor(GAME_CONFIG.SCREEN_HEIGHT / this.gridSize) - 3);
-      currentY = boundedYGrid * this.gridSize + this.gridSize / 2;
+      const nextYGrid = Math.floor(nextY / this.gridSize);
+      const boundedYGrid = Phaser.Math.Clamp(nextYGrid, 3, Math.floor(GAME_CONFIG.SCREEN_HEIGHT / this.gridSize) - 3);
+      const nextYSnapped = boundedYGrid * this.gridSize + this.gridSize / 2;
 
-      pathPoints.push({ x: currentX, y: currentY });
+      // Add intermediate points for orthogonal movement
+      // First move horizontally, then vertically (or vice versa)
+      if (currentX !== nextXSnapped && currentY !== nextYSnapped) {
+        // Choose movement order randomly for variety
+        const moveHorizontalFirst = Phaser.Math.Between(0, 1) === 0;
+        
+        if (moveHorizontalFirst) {
+          // Move horizontally first, then vertically
+          pathPoints.push({ x: nextXSnapped, y: currentY });
+          pathPoints.push({ x: nextXSnapped, y: nextYSnapped });
+        } else {
+          // Move vertically first, then horizontally
+          pathPoints.push({ x: currentX, y: nextYSnapped });
+          pathPoints.push({ x: nextXSnapped, y: nextYSnapped });
+        }
+      } else if (currentX !== nextXSnapped) {
+        // Only horizontal movement needed
+        pathPoints.push({ x: nextXSnapped, y: currentY });
+      } else if (currentY !== nextYSnapped) {
+        // Only vertical movement needed
+        pathPoints.push({ x: currentX, y: nextYSnapped });
+      }
+
+      currentX = nextXSnapped;
+      currentY = nextYSnapped;
     }
 
-    // Final point (castle position)
+    // Final point (castle position) - ensure orthogonal movement
     const castleXGrid = Math.floor((GAME_CONFIG.SCREEN_WIDTH - 80) / this.gridSize);
     const castleX = castleXGrid * this.gridSize + this.gridSize / 2;
     const castleY = currentY;
 
+    // Add intermediate point if needed for orthogonal movement to castle
+    if (currentX !== castleX) {
+      pathPoints.push({ x: castleX, y: currentY });
+    }
+    
     pathPoints.push({ x: castleX, y: castleY });
 
     return pathPoints;

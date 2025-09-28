@@ -79,9 +79,33 @@ export class EnemySprite extends Phaser.GameObjects.Container {
         this.targetY = this.path[this.pathIndex].y;
       }
     } else {
-      // Move towards target
-      this.x += (dx / distance) * this.speed;
-      this.y += (dy / distance) * this.speed;
+      // Orthogonal movement - prioritize larger displacement
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+      
+      // Use a threshold to determine if movement should be purely horizontal or vertical
+      const threshold = 2; // Small threshold to handle floating point precision
+      
+      if (absDx > threshold && absDy > threshold) {
+        // If both displacements are significant, move in the direction of larger displacement
+        if (absDx >= absDy) {
+          // Move horizontally
+          this.x += dx > 0 ? this.speed : -this.speed;
+        } else {
+          // Move vertically
+          this.y += dy > 0 ? this.speed : -this.speed;
+        }
+      } else if (absDx > threshold) {
+        // Only horizontal movement needed
+        this.x += dx > 0 ? this.speed : -this.speed;
+      } else if (absDy > threshold) {
+        // Only vertical movement needed
+        this.y += dy > 0 ? this.speed : -this.speed;
+      } else {
+        // Very close to target, use normal movement to avoid getting stuck
+        this.x += (dx / distance) * this.speed;
+        this.y += (dy / distance) * this.speed;
+      }
     }
 
     return null;
